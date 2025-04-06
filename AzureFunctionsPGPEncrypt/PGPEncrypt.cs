@@ -6,7 +6,6 @@ using System.Text;
 using PgpCore;
 using Org.BouncyCastle.Bcpg.OpenPgp;
 using Microsoft.Extensions.Configuration;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AzureFunctionsPGPEncrypt;
 
@@ -30,7 +29,7 @@ public class PGPEncrypt
 
         if (string.IsNullOrEmpty(publicKeyBase64))
         {
-            return new BadRequestObjectResult($"Please add a base64 encoded public key to an environment variable called pgp-public-key");
+            return new BadRequestObjectResult($"Please add a base64 encoded public key to an Azure Key Vault secret called pgp-public-key");
         }
 
         byte[] publicKeyBytes = Convert.FromBase64String(publicKeyBase64);

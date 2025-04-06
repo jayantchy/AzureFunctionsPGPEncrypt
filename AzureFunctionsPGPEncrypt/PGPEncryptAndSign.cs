@@ -6,6 +6,7 @@ using System.Text;
 using PgpCore;
 using Org.BouncyCastle.Bcpg.OpenPgp;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 
 namespace AzureFunctionsPGPEncrypt;
 
@@ -27,7 +28,7 @@ public class PGPEncryptAndSign
 
         string publicKeyBase64 = _configuration["pgp-public-key"];
         string privateKeySignBase64 = _configuration["pgp-private-key-sign"];
-        string passPhraseSign = _configuration["pgp-passphrase-sign"];
+        string passPhraseSign = _configuration["pgp-passphrase-sign"] ?? string.Empty;
 
         if (string.IsNullOrEmpty(publicKeyBase64))
         {
@@ -49,6 +50,10 @@ public class PGPEncryptAndSign
         await req.Body.CopyToAsync(inputStream);
         inputStream.Seek(0, SeekOrigin.Begin);
 
+        string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+        dynamic data = JsonConvert.DeserializeObject(requestBody);
+        string passPhraseFromRequest = data?.passPhrase;
+
         try
         {
             Stream encryptedData = await EncryptAndSignAsync(inputStream, publicKey, privateKeySign, passPhraseSign);
@@ -62,7 +67,11 @@ public class PGPEncryptAndSign
 
     private async Task<Stream> EncryptAndSignAsync(Stream inputStream, string publicKey, string privateKey, string passPhrase)
     {
-        using (PGP pgp = new PGP(new EncryptionKeys(publicKey, privateKey, passPhrase)))
+        EncryptionKeys encryptionKeys = string.IsNullOrEmpty(passPhrase)
+            ? new EncryptionKeys(publicKey,privateKey)
+            : new EncryptionKeys(publicKey, privateKey, passPhrase);
+
+        using (PGP pgp = new PGP(encryptionKeys))
         {
             var outputStream = new MemoryStream();
 
